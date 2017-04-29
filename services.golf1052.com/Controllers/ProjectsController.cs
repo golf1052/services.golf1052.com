@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
+using System.Text;
 
 namespace services.golf1052.com.Controllers
 {
@@ -18,8 +19,9 @@ namespace services.golf1052.com.Controllers
             JArray projects = new JArray();
             HttpClient httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("User-Agent", Secrets.GitHubUsername);
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", $"{Secrets.GitHubUsername}:{Secrets.GitHubToken}");
-            HttpResponseMessage repoResponse = await httpClient.GetAsync("https://api.github.com/user/repos");
+            string auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Secrets.GitHubUsername}:{Secrets.GitHubToken}"));
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", auth);
+            HttpResponseMessage repoResponse = await httpClient.GetAsync("https://api.github.com/user/repos?visibility=public&per_page=100");
             JArray repoResponseArray = JArray.Parse(await repoResponse.Content.ReadAsStringAsync());
             foreach (JObject repo in repoResponseArray)
             {
@@ -57,9 +59,15 @@ namespace services.golf1052.com.Controllers
                 {
                     description = (string)repo["description"];
                 }
-                HttpResponseMessage languagesResponse = await httpClient.GetAsync($"https://api.github.com/repos/{(string)owner["login"]}/{(string)repo["name"]}");
-                // add stuff
-                Project project = new Project();
+                HttpResponseMessage languagesResponse = await httpClient.GetAsync($"https://api.github.com/repos/{(string)owner["login"]}/{(string)repo["name"]}/languages");
+                JObject languagesResponseObject = JObject.Parse(await languagesResponse.Content.ReadAsStringAsync());
+                List<string> languages = new List<string>();
+                foreach (var language in languagesResponseObject)
+                {
+                    languages.Add(language.Key);
+                }
+                Project project = new Project(name, affiliation, created, updated, projectLink, description, languages);
+                projects.Add(project.ToJObject());
             }
             return projects;
         }
