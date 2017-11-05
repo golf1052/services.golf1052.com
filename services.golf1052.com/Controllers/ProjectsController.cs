@@ -17,6 +17,7 @@ namespace services.golf1052.com.Controllers
         public async Task<JArray> GetAll()
         {
             JArray projects = new JArray();
+            List<Project> projectsList = new List<Project>();
             HttpClient httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("User-Agent", Secrets.GitHubUsername);
             string auth = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Secrets.GitHubUsername}:{Secrets.GitHubToken}"));
@@ -26,6 +27,7 @@ namespace services.golf1052.com.Controllers
             foreach (JObject repo in repoResponseArray)
             {
                 string name = (string)repo["name"];
+                string githubLink = (string)repo["html_url"]; 
                 string affiliation = string.Empty;
                 JObject owner = (JObject)repo["owner"];
                 if ((string)owner["type"] == "User")
@@ -66,7 +68,12 @@ namespace services.golf1052.com.Controllers
                 {
                     languages.Add(language.Key);
                 }
-                Project project = new Project(name, affiliation, created, updated, projectLink, description, languages);
+                Project project = new Project(name, githubLink, affiliation, created, updated, projectLink, description, languages);
+                projectsList.Add(project);
+            }
+            projectsList.Sort((p1, p2) => p1.Updated.CompareTo(p2.Updated) * -1);
+            foreach (var project in projectsList)
+            {
                 projects.Add(project.ToJObject());
             }
             return projects;
@@ -76,13 +83,16 @@ namespace services.golf1052.com.Controllers
     struct Project
     {
         public string Name { get; private set; }
+        public string GithubLink { get; private set; }
         public string Affiliation { get; private set; }
+        public DateTime Updated { get; private set; }
         public string Dates { get; private set; }
         public string ProjectLink { get; private set; }
         public string Description { get; private set; }
         public List<string> Languages { get; private set; }
 
         public Project(string name,
+            string githubLink,
             string affiliation,
             DateTime created,
             DateTime updated,
@@ -91,7 +101,9 @@ namespace services.golf1052.com.Controllers
             List<string> languages)
         {
             Name = name;
+            GithubLink = githubLink;
             Affiliation = affiliation;
+            Updated = updated;
             Dates = $"{created.ToString("MMMM yyyy")} - {updated.ToString("MMMM yyyy")}";
             ProjectLink = projectLink;
             Description = description;
@@ -102,6 +114,7 @@ namespace services.golf1052.com.Controllers
         {
             JObject o = new JObject();
             o["name"] = Name;
+            o["github_link"] = GithubLink;
             o["affiliation"] = Affiliation;
             o["dates"] = Dates;
             o["project_link"] = ProjectLink;
