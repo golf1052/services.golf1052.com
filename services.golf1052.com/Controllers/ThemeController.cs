@@ -30,7 +30,7 @@ namespace services.golf1052.com.Controllers
             if (responseObject["response"]["error"] != null)
             {
                 Random random = new Random();
-                if (random.NextDouble() < 5)
+                if (random.NextDouble() < 0.5)
                 {
                     returnObject["theme"] = "light";
                 }
